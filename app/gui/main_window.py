@@ -5,11 +5,13 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread, Qt
 from PySide6.QtWidgets import (
+    QHBoxLayout,
     QLabel,
     QMainWindow,
     QMessageBox,
     QPlainTextEdit,
     QProgressBar,
+    QPushButton,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -66,10 +68,20 @@ class MainWindow(QMainWindow):
         self.status_console = QPlainTextEdit()
         self.status_console.setReadOnly(True)
         self.banner = QLabel("For authorized and lawful use only. Demo Safe Mode recommended for classroom.")
+        self.live_feed_toggle = QPushButton("Hide Live Feed")
+        self.live_feed_toggle.setCheckable(True)
+        self.live_feed_toggle.setChecked(True)
+        self.live_feed_toggle.clicked.connect(self._toggle_live_feed)
+
+        banner_row = QWidget()
+        banner_layout = QHBoxLayout(banner_row)
+        banner_layout.setContentsMargins(0, 0, 0, 0)
+        banner_layout.addWidget(self.banner, 1)
+        banner_layout.addWidget(self.live_feed_toggle, 0)
 
         central = QWidget()
         layout = QVBoxLayout(central)
-        layout.addWidget(self.banner)
+        layout.addWidget(banner_row)
         layout.addWidget(self.tabs)
         layout.addWidget(self.progress)
         layout.addWidget(self.status_console)
@@ -93,6 +105,10 @@ class MainWindow(QMainWindow):
                 logging.FileHandler(self.logs_dir / "errors.log", encoding="utf-8"),
             ],
         )
+
+    def _toggle_live_feed(self, visible: bool) -> None:
+        self.status_console.setVisible(visible)
+        self.live_feed_toggle.setText("Hide Live Feed" if visible else "Show Live Feed")
 
     def _append(self, text: str) -> None:
         self.status_console.appendPlainText(text)
