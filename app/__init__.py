@@ -1,0 +1,1 @@
+"""ForensiWipe application package."""
