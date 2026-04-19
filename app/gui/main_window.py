@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 from PySide6.QtCore import QThread, Qt
 from PySide6.QtWidgets import (
@@ -90,6 +91,12 @@ class MainWindow(QMainWindow):
         self.shredder.start_btn.clicked.connect(self.start_shredder_operation)
         self.partition.start_btn.clicked.connect(self.start_partition_operation)
         self.tabs.currentChanged.connect(self._on_tab_changed)
+
+        self.thread: QThread | None = None
+        self.worker: OperationWorker | None = None
+        self._active_request: WipeRequest | None = None
+        self._active_operation_name = ""
+        self._active_start = ""
         self._append("Startup disclaimer acknowledged in GUI.")
 
     def _on_tab_changed(self, index: int) -> None:
@@ -114,17 +121,33 @@ class MainWindow(QMainWindow):
         self.status_console.appendPlainText(text)
         logging.getLogger("forensiwipe.gui").info(text)
 
+    def _set_operation_controls_enabled(self, enabled: bool) -> None:
+        self.shredder.start_btn.setEnabled(enabled)
+        self.partition.start_btn.setEnabled(enabled)
+
     def _run_request(self, request: WipeRequest, operation_name: str) -> None:
+        if self.thread and self.thread.isRunning():
+            QMessageBox.warning(self, "Operation in progress", "Wait for the current operation to finish.")
+            return
+
         start = utc_now_iso()
+        self._active_request = request
+        self._active_operation_name = operation_name
+        self._active_start = start
+
         self.thread = QThread(self)
         self.worker = OperationWorker(request)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.progress.connect(self._on_progress)
-        self.worker.done.connect(lambda payload: self._on_done(payload, request, start, operation_name))
+        self.worker.done.connect(self._on_done)
         self.worker.failed.connect(self._on_failed)
         self.worker.done.connect(self.thread.quit)
         self.worker.failed.connect(self.thread.quit)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.finished.connect(self._on_thread_finished)
+
+        self._set_operation_controls_enabled(False)
         self.thread.start()
         self._append(f"Started operation {operation_name} on {request.target_path}")
 
@@ -133,8 +156,19 @@ class MainWindow(QMainWindow):
         self.progress.setValue(max(0, min(100, pct)))
         self._append(f"{pct}% - {msg}")
 
-    def _on_done(self, payload: dict, request: WipeRequest, start: str, operation_name: str) -> None:
+    def _on_done(self, payload: dict[str, Any]) -> None:
+        request = self._active_request
+        operation_name = self._active_operation_name
+        start = self._active_start
+
+        if request is None:
+            self._append("Internal state error: missing request context for completed operation.")
+            self._set_operation_controls_enabled(True)
+            return
+
         self._append(f"Completed: {payload.get('verification')} | errors={len(payload.get('errors', []))}")
+        is_dry_run = bool(request.dry_run)
+        status = "simulated" if is_dry_run else ("success" if payload.get("success") else "failed")
         record = OperationRecord(
             operation_id=new_operation_id(),
             case_id="CASE-DEMO-001",
@@ -147,7 +181,7 @@ class MainWindow(QMainWindow):
             method=request.method_name,
             passes=request.passes,
             bytes_processed=int(payload.get("bytes_processed", 0)),
-            status="success" if payload.get("success") else "failed",
+            status=status,
             verification=str(payload.get("verification", "unknown")),
             warnings=payload.get("warnings", []),
             forensic_notes=payload.get("forensic_notes", []),
@@ -160,11 +194,28 @@ class MainWindow(QMainWindow):
         self.dashboard.add_recent(f"{record.status} | {record.target_type} | {record.target}")
         self.reports_tab.refresh()
         self._append(f"Reports generated: {outputs}")
-        QMessageBox.information(self, "Operation complete", f"{operation_name} complete.\nStatus: {record.status}")
+        if is_dry_run:
+            QMessageBox.information(
+                self,
+                "Simulation complete",
+                f"{operation_name} ran in Dry Run mode.\nNo files were deleted.\nStatus: {record.status}",
+            )
+        else:
+            QMessageBox.information(self, "Operation complete", f"{operation_name} complete.\nStatus: {record.status}")
+
+        self._set_operation_controls_enabled(True)
 
     def _on_failed(self, error_text: str) -> None:
         self._append(error_text)
+        self._set_operation_controls_enabled(True)
         QMessageBox.critical(self, "Operation failed", error_text)
+
+    def _on_thread_finished(self) -> None:
+        self.thread = None
+        self.worker = None
+        self._active_request = None
+        self._active_operation_name = ""
+        self._active_start = ""
 
     def start_shredder_operation(self) -> None:
         target = self.shredder.target_input.text().strip()

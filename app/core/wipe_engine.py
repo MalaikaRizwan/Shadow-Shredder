@@ -109,6 +109,12 @@ class WipeEngine:
                     "Forensic-aware mode suggests running a free-space wipe to reduce recoverable remnants."
                 )
 
+            if request.dry_run:
+                result.verification = "dry-run"
+                result.warnings.append("Dry Run enabled: no on-disk changes were made.")
+                result.success = not result.errors
+                return result
+
             if request.verify and request.target_type in {"file", "folder"}:
                 deleted = Verifier.path_deleted(target)
                 result.verification = "deleted" if deleted else "residual-detected"

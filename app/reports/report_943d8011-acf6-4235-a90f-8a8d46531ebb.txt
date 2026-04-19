@@ -1,0 +1,10 @@
+ForensiWipe Summary
+Operation: 943d8011-acf6-4235-a90f-8a8d46531ebb
+Status: success
+Target: D:/small.txt
+Method: NULL_0x00
+Verification: residual-detected
+Metadata Handling Mode: Enhanced
+Metadata Actions: rename_rounds=2, truncate=True, sha256_pre_wipe=False
+Metadata Handling Mode: Enhanced (balanced sanitization with practical metadata minimization)
+Ended: 2026-04-18T19:24:07.683099+00:00
