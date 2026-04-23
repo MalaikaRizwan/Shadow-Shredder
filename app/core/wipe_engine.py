@@ -89,7 +89,17 @@ class WipeEngine:
             if request.target_type == "file":
                 result.bytes_processed = self._wipe_file(target, request, method, progress_cb, cancel_flag, result)
             elif request.target_type == "folder":
-                result.bytes_processed = self._wipe_folder(target, request, method, progress_cb, cancel_flag, result)
+                result.bytes_processed = self._wipe_directory(
+                    target,
+                    request,
+                    method,
+                    progress_cb,
+                    cancel_flag,
+                    result,
+                    remove_root=True,
+                )
+            elif request.target_type == "partition":
+                result.bytes_processed = self._wipe_partition(target, request, method, progress_cb, cancel_flag, result)
             elif request.target_type == "free-space":
                 bytes_done, notes = self._free_space.wipe(
                     target,
@@ -198,7 +208,50 @@ class WipeEngine:
         current_path.unlink()
         return bytes_processed
 
-    def _wipe_folder(
+    def _wipe_partition(
+        self,
+        partition_root: Path,
+        req: WipeRequest,
+        method,
+        progress_cb: ProgressCb | None,
+        cancel_flag,
+        result: WipeResult,
+    ) -> int:
+        bytes_processed = self._wipe_directory(
+            partition_root,
+            req,
+            method,
+            progress_cb,
+            cancel_flag,
+            result,
+            remove_root=False,
+        )
+        if req.dry_run:
+            free_bytes_processed, notes = self._free_space.wipe(
+                partition_root,
+                method,
+                req.passes,
+                req.chunk_size,
+                True,
+                progress_cb,
+                cancel_flag,
+            )
+            result.forensic_notes.extend(notes)
+            return bytes_processed + free_bytes_processed
+
+        free_bytes_processed, notes = self._free_space.wipe(
+            partition_root,
+            method,
+            req.passes,
+            req.chunk_size,
+            False,
+            progress_cb,
+            cancel_flag,
+        )
+        result.forensic_notes.extend(notes)
+        return bytes_processed + free_bytes_processed
+
+    def _wipe_directory(
         self,
         folder: Path,
         req: WipeRequest,
@@ -206,6 +259,8 @@ class WipeEngine:
         progress_cb: ProgressCb | None,
         cancel_flag,
         result: WipeResult,
+        *,
+        remove_root: bool,
     ) -> int:
         if not folder.exists():
             raise FileNotFoundError(folder)
@@ -224,6 +279,14 @@ class WipeEngine:
             result.errors.extend(file_result.errors)
         for root, dirs, _ in os.walk(folder, topdown=False):
             for d in dirs:
-                Path(root, d).rmdir()
-        folder.rmdir()
+                dir_path = Path(root, d)
+                try:
+                    dir_path.rmdir()
+                except PermissionError:
+                    result.warnings.append(f"Skipped protected directory during partition wipe: {dir_path}")
+        if remove_root:
+            try:
+                folder.rmdir()
+            except PermissionError:
+                result.warnings.append(f"Skipped protected partition root during cleanup: {folder}")
         return done

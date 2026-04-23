@@ -1,1 +1,1 @@
-"""ForensiWipe application package."""
+"""Shadow Shredder application package."""

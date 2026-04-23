@@ -1,1 +1,1 @@
-"""GUI components for ForensiWipe."""
+"""GUI components for Shadow Shredder."""

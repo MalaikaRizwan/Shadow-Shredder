@@ -1,4 +1,4 @@
-"""ForensiWipe application entry point."""
+"""Shadow Shredder application entry point."""
 
 from __future__ import annotations
 
@@ -11,9 +11,9 @@ from app.gui.main_window import MainWindow
 
 
 def main() -> int:
-    """Launch the ForensiWipe GUI."""
+    """Launch the Shadow Shredder GUI."""
     app = QApplication(sys.argv)
-    app.setApplicationName("ForensiWipe")
+    app.setApplicationName("Shadow Shredder")
     app.setOrganizationName("Academic Digital Forensics Lab")
 
     project_root = Path(__file__).resolve().parent

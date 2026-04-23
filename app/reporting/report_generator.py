@@ -68,7 +68,7 @@ class ReportGenerator:
         if "txt" in formats:
             txt_path = base.with_suffix(".txt")
             txt_path.write_text(
-                f"ForensiWipe Summary\nOperation: {record.operation_id}\nStatus: {record.status}\n"
+                f"Shadow Shredder Summary\nOperation: {record.operation_id}\nStatus: {record.status}\n"
                 f"Target: {record.target}\nMethod: {record.method}\nVerification: {record.verification}\n"
                 f"Metadata Handling Mode: {record.metadata_mode}\n"
                 f"Metadata Actions: rename_rounds={record.metadata_actions.get('rename_rounds', 0)}, "

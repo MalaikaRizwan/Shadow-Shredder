@@ -1,1 +1,0 @@
-This is safe sample test data for ForensiWipe dry-run and test cases.

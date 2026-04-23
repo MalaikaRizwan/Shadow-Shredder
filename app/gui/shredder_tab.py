@@ -81,7 +81,7 @@ class ShredderTab(QWidget):
         self.metadata_mode_status.setObjectName("Muted")
         self.metadata_mode_status.setWordWrap(True)
         self.generate_reports = QCheckBox("Generate Reports")
-        self.generate_reports.setChecked(True)
+        self.generate_reports.setChecked(False)
         self.report_json = QCheckBox("Generate JSON report")
         self.report_json.setChecked(True)
         self.report_html = QCheckBox("Generate HTML report")

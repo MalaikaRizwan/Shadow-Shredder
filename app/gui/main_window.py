@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QThread, Qt
+from PySide6.QtCore import QThread, Qt, QTimer
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -23,7 +23,7 @@ from app.core.metadata_mode import build_metadata_mode_config, metadata_mode_sum
 from app.core.utils import ensure_dir, get_username_fallback, new_operation_id, utc_now_iso
 from app.core.wipe_engine import WipeRequest
 from app.gui.dashboard_tab import DashboardTab
-from app.gui.forensic_notes_tab import ForensicNotesTab
+from app.gui.dialogs import ForensicNotesDialog
 from app.gui.partition_tab import PartitionTab
 from app.gui.reports_tab import ReportsTab
 from app.gui.shredder_tab import ShredderTab
@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
         self.reports_dir = ensure_dir(project_root / "app" / "reports")
         self._setup_logging()
         self.reporter = ReportGenerator(self.reports_dir)
-        self.setWindowTitle("ForensiWipe - Forensic Sanitization Workstation")
+        self.setWindowTitle("Shadow Shredder - Forensic Sanitization Workstation")
         self.resize(1200, 800)
         self.setStyleSheet(APP_QSS)
 
@@ -49,18 +49,15 @@ class MainWindow(QMainWindow):
         self.tabs.setMovable(False)
         self.tabs.setUsesScrollButtons(True)
         self.tabs.setElideMode(Qt.ElideRight)
-        self.tabs.setStyleSheet("QTabWidget, QTabWidget::pane, QWidget { background-color: #060b16; }")
         self.dashboard = DashboardTab()
         self.shredder = ShredderTab()
         self.partition = PartitionTab()
         self.reports_tab = ReportsTab(self.reports_dir)
-        self.notes_tab = ForensicNotesTab()
 
         self.tabs.addTab(self.dashboard, "Dashboard")
         self.tabs.addTab(self.shredder, "File / Folder Shredder")
         self.tabs.addTab(self.partition, "Partition / Free Space Wipe")
         self.tabs.addTab(self.reports_tab, "Reports & Logs")
-        self.tabs.addTab(self.notes_tab, "Forensic Notes")
         for i in range(self.tabs.count()):
             tab_widget = self.tabs.widget(i)
             tab_widget.setAttribute(Qt.WA_StyledBackground, True)
@@ -69,9 +66,9 @@ class MainWindow(QMainWindow):
         self.status_console = QPlainTextEdit()
         self.status_console.setReadOnly(True)
         self.banner = QLabel("For authorized and lawful use only. Demo Safe Mode recommended for classroom.")
-        self.live_feed_toggle = QPushButton("Hide Live Feed")
+        self.live_feed_toggle = QPushButton("Show Live Feed")
         self.live_feed_toggle.setCheckable(True)
-        self.live_feed_toggle.setChecked(True)
+        self.live_feed_toggle.setChecked(False)
         self.live_feed_toggle.clicked.connect(self._toggle_live_feed)
 
         banner_row = QWidget()
@@ -97,11 +94,23 @@ class MainWindow(QMainWindow):
         self._active_request: WipeRequest | None = None
         self._active_operation_name = ""
         self._active_start = ""
+        self._forensic_notes_dialog = None
+        self._toggle_live_feed(False)
         self._append("Startup disclaimer acknowledged in GUI.")
+        QTimer.singleShot(0, self._show_forensic_notes_popup)
 
     def _on_tab_changed(self, index: int) -> None:
         if self.tabs.tabText(index) == "Dashboard":
             self.dashboard.refresh_drives()
+
+    def _show_forensic_notes_popup(self) -> None:
+        self._forensic_notes_dialog = ForensicNotesDialog(self)
+        self._forensic_notes_dialog.setAttribute(Qt.WA_DeleteOnClose, True)
+        self._forensic_notes_dialog.finished.connect(self._clear_forensic_notes_dialog)
+        self._forensic_notes_dialog.open()
+
+    def _clear_forensic_notes_dialog(self) -> None:
+        self._forensic_notes_dialog = None
 
     def _setup_logging(self) -> None:
         logging.basicConfig(
@@ -264,14 +273,6 @@ class MainWindow(QMainWindow):
         mount = item.text().split("|")[0]
         mode = self.partition.mode_combo.currentText()
         target_type = "free-space" if "Free-space" in mode else "partition"
-        if target_type == "partition":
-            QMessageBox.warning(
-                self,
-                "Safety constraint",
-                "Raw full partition wiping is intentionally constrained in this academic build. "
-                "Use Dry Run or Free-space wipe mode for safe demonstration.",
-            )
-            return
         req = WipeRequest(
             target_path=mount,
             target_type=target_type,
@@ -287,6 +288,8 @@ class MainWindow(QMainWindow):
                 self.partition.metadata_mode_combo.currentText(),
                 {"rename_rounds": 0},
             ),
+            generate_reports=self.partition.generate_reports.isChecked(),
+            report_formats=self.partition.selected_report_formats(),
         )
         self._append("Typed confirmation validated for partition/free-space action.")
         self._append(metadata_mode_summary(req.metadata_mode))

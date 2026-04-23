@@ -1,6 +1,6 @@
-# ForensiWipe
+# Shadow Shredder
 
-ForensiWipe is a **Digital Forensics-aware Secure Sanitization Tool for Controlled Data Destruction and Artifact Minimization**.  
+Shadow Shredder is a **Digital Forensics-aware Secure Sanitization Tool for Controlled Data Destruction and Artifact Minimization**.  
 It provides academic-grade secure deletion workflows for files, folders, and drive free space with transparent forensic limitations.
 
 ## Key Features

@@ -3,7 +3,7 @@ OPERATION_TEMPLATE = """
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>ForensiWipe Report</title>
+  <title>Shadow Shredder Report</title>
   <style>
     body { font-family: Arial, sans-serif; background:#0f172a; color:#e2e8f0; padding:20px; }
     .card { background:#1e293b; border-radius:8px; padding:16px; margin-bottom:14px; }
@@ -12,7 +12,7 @@ OPERATION_TEMPLATE = """
   </style>
 </head>
 <body>
-  <h1>ForensiWipe Operation Report</h1>
+  <h1>Shadow Shredder Operation Report</h1>
   <div class="card">
     <p><b>Operation ID:</b> {{ operation_id }}</p>
     <p><b>Case ID:</b> {{ case_id }}</p>
