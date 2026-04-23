@@ -80,6 +80,16 @@ class ShredderTab(QWidget):
         self.metadata_mode_status = QLabel("")
         self.metadata_mode_status.setObjectName("Muted")
         self.metadata_mode_status.setWordWrap(True)
+        self.generate_reports = QCheckBox("Generate Reports")
+        self.generate_reports.setChecked(True)
+        self.report_json = QCheckBox("Generate JSON report")
+        self.report_json.setChecked(True)
+        self.report_html = QCheckBox("Generate HTML report")
+        self.report_html.setChecked(True)
+        self.report_txt = QCheckBox("Generate Text report")
+        self.report_txt.setChecked(True)
+        self.report_csv = QCheckBox("Update CSV log")
+        self.report_csv.setChecked(True)
         self.preview = QTextEdit()
         self.preview.setReadOnly(True)
         self.start_btn = QPushButton("Start Shred")
@@ -153,6 +163,16 @@ class ShredderTab(QWidget):
         s_layout.addWidget(self.quick_mode, 11, 1)
         s_layout.addWidget(self.hash_before, 12, 1)
 
+        reports_box = QGroupBox("Report Formats")
+        r_layout = QVBoxLayout(reports_box)
+        r_layout.setContentsMargins(15, 15, 15, 15)
+        r_layout.setSpacing(12)
+        r_layout.addWidget(self.generate_reports)
+        r_layout.addWidget(self.report_json)
+        r_layout.addWidget(self.report_html)
+        r_layout.addWidget(self.report_txt)
+        r_layout.addWidget(self.report_csv)
+
         preview_box = QGroupBox("Preview")
         p_layout = QVBoxLayout(preview_box)
         p_layout.setContentsMargins(15, 15, 15, 15)
@@ -167,6 +187,7 @@ class ShredderTab(QWidget):
 
         content.addWidget(target_box)
         content.addWidget(settings)
+        content.addWidget(reports_box)
         content.addWidget(preview_box)
 
         action_row = QHBoxLayout()
@@ -177,7 +198,9 @@ class ShredderTab(QWidget):
         action_row.addStretch(1)
         content.addLayout(action_row)
         self.metadata_mode_combo.currentTextChanged.connect(self._refresh_metadata_mode_hint)
+        self.generate_reports.toggled.connect(self._update_report_visibility)
         self._refresh_metadata_mode_hint()
+        self._update_report_visibility(self.generate_reports.isChecked())
 
     def _refresh_metadata_mode_hint(self) -> None:
         self.metadata_mode_status.setText(metadata_mode_hint(self.metadata_mode_combo.currentText()))
@@ -208,3 +231,21 @@ class ShredderTab(QWidget):
         if p.is_dir():
             return "folder"
         return "file"
+
+    def _update_report_visibility(self, visible: bool) -> None:
+        self.report_json.setVisible(visible)
+        self.report_html.setVisible(visible)
+        self.report_txt.setVisible(visible)
+        self.report_csv.setVisible(visible)
+
+    def selected_report_formats(self) -> list[str]:
+        formats = []
+        if self.report_json.isChecked():
+            formats.append("json")
+        if self.report_html.isChecked():
+            formats.append("html")
+        if self.report_txt.isChecked():
+            formats.append("txt")
+        if self.report_csv.isChecked():
+            formats.append("csv")
+        return formats

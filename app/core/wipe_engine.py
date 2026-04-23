@@ -32,6 +32,8 @@ class WipeRequest:
     hash_before: bool = False
     metadata_mode: str = "Enhanced"
     metadata_actions: dict = field(default_factory=dict)
+    generate_reports: bool = True
+    report_formats: list[str] = field(default_factory=lambda: ["json", "html", "txt", "csv"])
 
 
 @dataclass

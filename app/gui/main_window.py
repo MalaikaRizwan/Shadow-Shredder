@@ -190,10 +190,14 @@ class MainWindow(QMainWindow):
             metadata_actions=payload.get("metadata", {}).get("metadata_actions", {}),
             metadata_summary=str(payload.get("metadata", {}).get("metadata_summary", "")),
         )
-        outputs = self.reporter.save_reports(record)
+        if request.generate_reports:
+            outputs = self.reporter.save_reports(record, request.report_formats)
+            self._append(f"Reports generated: {outputs}")
+        else:
+            outputs = {}
+            self._append("Report generation disabled")
         self.dashboard.add_recent(f"{record.status} | {record.target_type} | {record.target}")
         self.reports_tab.refresh()
-        self._append(f"Reports generated: {outputs}")
         if is_dry_run:
             QMessageBox.information(
                 self,
@@ -243,6 +247,8 @@ class MainWindow(QMainWindow):
                     "hash_before": self.shredder.hash_before.isChecked(),
                 },
             ),
+            generate_reports=self.shredder.generate_reports.isChecked(),
+            report_formats=self.shredder.selected_report_formats(),
         )
         self._append(metadata_mode_summary(req.metadata_mode))
         self._run_request(req, "File/Folder Shred")

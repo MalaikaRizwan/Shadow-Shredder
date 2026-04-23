@@ -18,7 +18,7 @@ def test_report_generation(tmp_path):
         status="success",
         verification="deleted",
     )
-    outputs = gen.save_reports(record)
+    outputs = gen.save_reports(record, ["json", "html", "txt", "csv"])
     for p in outputs.values():
         from pathlib import Path
 
