@@ -1,3 +1,4 @@
+#main.py
 """Secure Shredder application entry point."""
 
 from __future__ import annotations
